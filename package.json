@@ -1,0 +1,14 @@
+{
+  "name": "tf2-price-checker",
+  "version": "1.0.0",
+  "description": "Fetches TF2 key prices via a serverless function.",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "node-fetch": "^3.3.2"
+  }
+}
