@@ -45,17 +45,17 @@
         src="https://wiki.teamfortress.com/w/images/thumb/6/69/Item_icon_Mann_Co._Supply_Crate_Key.png/250px-Item_icon_Mann_Co._Supply_Crate_Key.png"
         alt="TF2 Key"
         class="mx-auto w-24 h-24 mb-4"
-        onerror="this.onerror=null;this.src='https.placehold.co/96x96/1f2937/ffffff?text=TF2+Key';"
+        onerror="this.onerror=null;this.src='https://placehold.co/96x96/1f2937/ffffff?text=TF2+Key';"
       />
 
       <h1 class="text-3xl font-bold mb-2 text-yellow-400">
         قیمت کلید Team Fortress 2
       </h1>
-      <p class="text-gray-400 mb-6">
-        قیمت لحظه‌ای در مارکت استیم برای منطقه اوکراین (UAH)
-      </p>
 
-      <!-- نمایشگر قیمت -->
+      <!-- نمایشگر قیمت استیم -->
+      <p class="text-gray-400 mb-2">
+        قیمت لحظه‌ای در مارکت استیم (منطقه اوکراین)
+      </p>
       <div
         id="price-display"
         class="bg-gray-700 p-6 rounded-lg mb-6 min-h-[100px] flex items-center justify-center"
@@ -66,71 +66,119 @@
         <div id="loader" class="loader hidden"></div>
       </div>
 
+      <!-- نمایشگر قیمت EasyKeys -->
+      <div class="mt-8 border-t border-gray-700 pt-6">
+        <h2 class="text-2xl font-bold mb-2 text-cyan-400">
+          قیمت در EasyKeys.ir
+        </h2>
+        <div
+          id="easykeys-price-display"
+          class="bg-gray-700 p-6 rounded-lg mb-6 min-h-[100px] flex items-center justify-center"
+        >
+          <span
+            id="easykeys-price-text"
+            class="text-4xl font-bold text-gray-500"
+            >...</span
+          >
+          <div id="easykeys-loader" class="loader hidden"></div>
+        </div>
+        <p id="easykeys-error-message" class="text-red-500 mt-4 h-5"></p>
+      </div>
+
       <!-- دکمه برای دریافت قیمت -->
       <button
         id="fetch-price-btn"
-        class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-lg transition duration-300 ease-in-out transform hover:scale-105"
+        class="w-full mt-6 bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-lg transition duration-300 ease-in-out transform hover:scale-105"
       >
-        دریافت قیمت
+        به‌روزرسانی قیمت‌ها
       </button>
-
-      <!-- نمایش خطا -->
-      <p id="error-message" class="text-red-500 mt-4 h-5"></p>
     </div>
 
     <script>
-      // المنت های صفحه
+      // المنت های صفحه (استیم)
       const fetchButton = document.getElementById("fetch-price-btn");
       const priceText = document.getElementById("price-text");
-      const errorMessage = document.getElementById("error-message");
       const loader = document.getElementById("loader");
 
-      // آدرس فانکشن بدون سرور شما در Netlify
-      // Netlify به صورت خودکار این مسیر را به فانکشن صحیح متصل می‌کند
-      const finalApiUrl = "/.netlify/functions/getPrice";
+      // المنت های صفحه (EasyKeys)
+      const easyKeysPriceText = document.getElementById("easykeys-price-text");
+      const easyKeysErrorMessage = document.getElementById(
+        "easykeys-error-message"
+      );
+      const easyKeysLoader = document.getElementById("easykeys-loader");
 
-      async function fetchPrice() {
-        // نمایش لودر و پنهان کردن متن قیمت و خطا
+      // آدرس فانکشن ها در Netlify
+      const steamApiUrl = "/.netlify/functions/getPrice";
+      const easyKeysApiUrl = "/.netlify/functions/getEasyKeysPrice";
+
+      // فانکشن برای دریافت قیمت استیم
+      async function fetchSteamPrice() {
         priceText.classList.add("hidden");
         loader.classList.remove("hidden");
-        errorMessage.textContent = "";
-        fetchButton.disabled = true;
-        fetchButton.classList.add("opacity-50", "cursor-not-allowed");
 
         try {
-          // درخواست به فانکشن شما، نه به پروکسی یا استیم
-          const response = await fetch(finalApiUrl);
+          const response = await fetch(steamApiUrl);
           const data = await response.json();
+          if (!response.ok || !data.success)
+            throw new Error(data.message || "پاسخ استیم ناموفق بود.");
 
-          // بررسی اینکه آیا فانکشن خطا برگردانده یا خود استیم
-          if (!response.ok || !data.success) {
-            throw new Error(data.message || "پاسخ دریافتی از سرور ناموفق بود.");
-          }
-
-          // نمایش قیمت موفقیت‌آمیز
           priceText.textContent = data.lowest_price;
           priceText.classList.remove("text-gray-500", "text-red-500");
           priceText.classList.add("text-green-400");
         } catch (error) {
-          console.error("خطا در دریافت اطلاعات:", error);
-          errorMessage.textContent = "دریافت اطلاعات با خطا مواجه شد.";
+          console.error("خطا در دریافت اطلاعات استیم:", error);
           priceText.textContent = "خطا!";
           priceText.classList.remove("text-green-400");
           priceText.classList.add("text-red-500");
         } finally {
-          // بازگرداندن صفحه به حالت عادی
           loader.classList.add("hidden");
           priceText.classList.remove("hidden");
-          fetchButton.disabled = false;
-          fetchButton.classList.remove("opacity-50", "cursor-not-allowed");
         }
       }
 
+      // فانکشن برای دریافت قیمت EasyKeys
+      async function fetchEasyKeysPrice() {
+        easyKeysPriceText.classList.add("hidden");
+        easyKeysLoader.classList.remove("hidden");
+        easyKeysErrorMessage.textContent = "";
+
+        try {
+          const response = await fetch(easyKeysApiUrl);
+          const data = await response.json();
+          if (!response.ok || !data.success)
+            throw new Error(data.message || "پاسخ EasyKeys ناموفق بود.");
+
+          easyKeysPriceText.textContent = `${data.price} تومان`;
+          easyKeysPriceText.classList.remove("text-gray-500", "text-red-500");
+          easyKeysPriceText.classList.add("text-teal-300");
+        } catch (error) {
+          console.error("خطا در دریافت اطلاعات EasyKeys:", error);
+          easyKeysErrorMessage.textContent = "خطا در دریافت قیمت EasyKeys.";
+          easyKeysPriceText.textContent = "خطا!";
+          easyKeysPriceText.classList.remove("text-teal-300");
+          easyKeysPriceText.classList.add("text-red-500");
+        } finally {
+          easyKeysLoader.classList.add("hidden");
+          easyKeysPriceText.classList.remove("hidden");
+        }
+      }
+
+      function fetchAllPrices() {
+        fetchButton.disabled = true;
+        fetchButton.classList.add("opacity-50", "cursor-not-allowed");
+
+        // اجرای همزمان هر دو فانکشن
+        Promise.all([fetchSteamPrice(), fetchEasyKeysPrice()]).finally(() => {
+          fetchButton.disabled = false;
+          fetchButton.classList.remove("opacity-50", "cursor-not-allowed");
+        });
+      }
+
       // افزودن رویداد کلیک به دکمه
-      fetchButton.addEventListener("click", fetchPrice);
+      fetchButton.addEventListener("click", fetchAllPrices);
 
       // دریافت قیمت در اولین بارگذاری صفحه
-      window.onload = fetchPrice;
+      window.onload = fetchAllPrices;
     </script>
   </body>
 </html>
