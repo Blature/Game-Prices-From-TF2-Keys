@@ -1,0 +1,7 @@
+# Netlify Functions bundling configuration
+# Ensure Chromium binary assets are included for @sparticuz/chromium
+[functions]
+  node_bundler = "zisi"
+  included_files = [
+    "node_modules/@sparticuz/chromium/bin/**"
+  ]
