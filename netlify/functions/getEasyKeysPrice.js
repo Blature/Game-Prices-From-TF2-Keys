@@ -1,5 +1,4 @@
 // Import required libraries
-const fetch = require("node-fetch");
 const cheerio = require("cheerio");
 
 // The target URL
@@ -10,6 +9,9 @@ const userAgent =
 
 exports.handler = async (event, context) => {
   try {
+    // Use dynamic import to be compatible with node-fetch v3 (ESM-only)
+    const fetch = (await import("node-fetch")).default;
+
     // Fetch the HTML content of the page
     const response = await fetch(targetUrl, {
       headers: { "User-Agent": userAgent },
@@ -18,6 +20,10 @@ exports.handler = async (event, context) => {
     if (!response.ok) {
       return {
         statusCode: response.status,
+        headers: {
+          "Content-Type": "application/json",
+          "Access-Control-Allow-Origin": "*",
+        },
         body: JSON.stringify({
           success: false,
           message: `Error fetching page: ${response.statusText}`,
@@ -47,6 +53,10 @@ exports.handler = async (event, context) => {
     if (!priceText) {
       return {
         statusCode: 404,
+        headers: {
+          "Content-Type": "application/json",
+          "Access-Control-Allow-Origin": "*",
+        },
         body: JSON.stringify({
           success: false,
           message:
@@ -58,13 +68,20 @@ exports.handler = async (event, context) => {
     // Return the successful response
     return {
       statusCode: 200,
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        "Content-Type": "application/json",
+        "Access-Control-Allow-Origin": "*",
+      },
       body: JSON.stringify({ success: true, price: priceText }),
     };
   } catch (error) {
     console.error("Error scraping EasyKeys:", error);
     return {
       statusCode: 500,
+      headers: {
+        "Content-Type": "application/json",
+        "Access-Control-Allow-Origin": "*",
+      },
       body: JSON.stringify({
         success: false,
         message: "An internal server error occurred while scraping.",
