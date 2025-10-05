@@ -1,73 +1,82 @@
-const chromium = require("@sparticuz/chromium");
-const puppeteer = require("puppeteer-core");
-
 const targetUrl = "https://easykeys.ir/browse/tf2";
 
+function normalizePersianDigits(str) {
+  const map = {
+    "۰": "0",
+    "۱": "1",
+    "۲": "2",
+    "۳": "3",
+    "۴": "4",
+    "۵": "5",
+    "۶": "6",
+    "۷": "7",
+    "۸": "8",
+    "۹": "9",
+  };
+  return str.replace(/[۰-۹]/g, (d) => map[d] || d);
+}
+
 exports.handler = async () => {
-  let browser;
   try {
-    browser = await puppeteer.launch({
-      args: chromium.args,
-      executablePath: await chromium.executablePath(),
-      headless: true,
+    // Use a prerender service to fetch rendered content (avoids headless browser in serverless)
+    const prerenderUrl = `https://r.jina.ai/http://easykeys.ir/browse/tf2`;
+    const response = await fetch(prerenderUrl, {
+      headers: {
+        "User-Agent":
+          "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/106.0.0.0 Safari/537.36",
+      },
     });
 
-    const page = await browser.newPage();
-    await page.setUserAgent(
-      "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/106.0.0.0 Safari/537.36"
-    );
-    await page.goto(targetUrl, { waitUntil: "networkidle2", timeout: 30000 });
-
-    const selectors = [
-      'span[dir="rtl"].text-teal-200.mr-4 b',
-      'div.flex-auto:nth-child(1) > div.flex.flex-wrap:nth-child(1) > div.pt-6.px-2.text-center:nth-child(2) > p.mt-3.text-sm.text-gray-500:nth-child(2) > span.text-teal-200.mr-4:nth-child(1) > b:nth-child(1)'
-    ];
-
-    let priceText = "";
-    for (const sel of selectors) {
-      try {
-        await page.waitForSelector(sel, { timeout: 8000 });
-        const text = await page.$eval(sel, (el) => el.textContent.trim());
-        if (text) {
-          priceText = text;
-          break;
-        }
-      } catch {}
-    }
-
-    if (!priceText) {
+    if (!response.ok) {
       return {
-        statusCode: 404,
+        statusCode: response.status,
         headers: {
-          "Content-Type": "application/json",
           "Access-Control-Allow-Origin": "*",
+          "Content-Type": "application/json",
         },
         body: JSON.stringify({
           success: false,
-          message:
-            "Price element not found with known selectors after rendering the page.",
+          message: `Error fetching prerendered page: ${response.statusText}`,
         }),
       };
     }
 
+    const text = await response.text();
+    // Try to extract number preceding "تومان"
+    const match = text.match(/([۰-۹0-9.,\s]+)\s*تومان/);
+    if (!match) {
+      return {
+        statusCode: 404,
+        headers: {
+          "Access-Control-Allow-Origin": "*",
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          success: false,
+          message: "Price not found in prerendered content.",
+        }),
+      };
+    }
+
+    const raw = match[1].trim();
+    const normalized = normalizePersianDigits(raw).replace(/\s/g, "");
+
     return {
       statusCode: 200,
       headers: {
-        "Content-Type": "application/json",
         "Access-Control-Allow-Origin": "*",
+        "Content-Type": "application/json",
       },
-      body: JSON.stringify({ success: true, price: priceText }),
+      body: JSON.stringify({ success: true, price: normalized }),
     };
   } catch (error) {
     return {
       statusCode: 500,
       headers: {
-        "Content-Type": "application/json",
         "Access-Control-Allow-Origin": "*",
+        "Content-Type": "application/json",
       },
       body: JSON.stringify({ success: false, message: error.message }),
     };
-  } finally {
-    if (browser) await browser.close();
   }
 };

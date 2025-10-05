@@ -8,10 +8,7 @@ exports.handler = async (event, context) => {
   )}`;
 
   try {
-    // We need to import 'node-fetch' because serverless functions don't have the browser's fetch
-    // Run 'npm install node-fetch' in your project folder
-    const fetch = (await import("node-fetch")).default;
-
+    // Use Node 18+ global fetch available in Netlify runtime
     const response = await fetch(steamApiUrl);
     const data = await response.json();
 
@@ -23,8 +20,8 @@ exports.handler = async (event, context) => {
     return {
       statusCode: 200,
       headers: {
-        // This header is VERY IMPORTANT to solve the CORS issue
         "Access-Control-Allow-Origin": "*",
+        "Content-Type": "application/json",
       },
       body: JSON.stringify(data),
     };
@@ -32,6 +29,10 @@ exports.handler = async (event, context) => {
     // Return an error response to the browser
     return {
       statusCode: 500,
+      headers: {
+        "Access-Control-Allow-Origin": "*",
+        "Content-Type": "application/json",
+      },
       body: JSON.stringify({ success: false, message: error.message }),
     };
   }
