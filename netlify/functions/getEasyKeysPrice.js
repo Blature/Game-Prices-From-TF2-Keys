@@ -42,8 +42,13 @@ exports.handler = async () => {
     }
 
     const text = await response.text();
-    // Try to extract number preceding "تومان"
-    const match = text.match(/([۰-۹0-9.,\s]+)\s*تومان/);
+    // Clean Markdown markers to improve matching (e.g., **200,000**تومان)
+    const cleaned = text
+      .replace(/\*\*/g, "")
+      .replace(/`/g, "")
+      .replace(/\s+/g, " ");
+    // Try to extract number preceding "تومان" allowing optional markup
+    const match = cleaned.match(/([۰-۹0-9.,]+)\s*تومان/);
     if (!match) {
       return {
         statusCode: 404,
