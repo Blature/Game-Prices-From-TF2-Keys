@@ -29,22 +29,31 @@ exports.handler = async (event, context) => {
     // Load the HTML into Cheerio to parse it
     const $ = cheerio.load(html);
 
-    // Find the specific element containing the price using its CSS selectors
-    const priceElement = $('span[dir="rtl"].text-teal-200.mr-4 b');
+    // Try multiple selectors for resilience based on Puppeteer probe
+    const selectors = [
+      'span[dir="rtl"].text-teal-200.mr-4 b',
+      'div.flex-auto:nth-child(1) > div.flex.flex-wrap:nth-child(1) > div.pt-6.px-2.text-center:nth-child(2) > p.mt-3.text-sm.text-gray-500:nth-child(2) > span.text-teal-200.mr-4:nth-child(1) > b:nth-child(1)'
+    ];
 
-    if (priceElement.length === 0) {
+    let priceText = '';
+    for (const sel of selectors) {
+      const el = $(sel);
+      if (el && el.length) {
+        priceText = el.first().text().trim();
+        if (priceText) break;
+      }
+    }
+
+    if (!priceText) {
       return {
         statusCode: 404,
         body: JSON.stringify({
           success: false,
           message:
-            "Price element not found on the page. The website structure might have changed.",
+            "Price element not found with known selectors. The website structure might have changed.",
         }),
       };
     }
-
-    // Extract the price text (e.g., "187,600")
-    const priceText = priceElement.text().trim();
 
     // Return the successful response
     return {
