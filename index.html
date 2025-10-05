@@ -66,13 +66,10 @@
         <div id="loader" class="loader hidden"></div>
       </div>
 
-      <!-- Net received (Steam fees) -->
+      <!-- Net received (from live Steam price, UAH) -->
       <div class="mt-4 text-sm text-gray-300 text-left">
-        <label for="buyer-price" class="block font-semibold mb-1">Buyer price per key (USD)</label>
-        <input id="buyer-price" type="number" step="0.01" value="2.50" class="w-full bg-gray-700 rounded px-3 py-2 focus:outline-none" />
-        <p id="net-received" class="mt-2">Net received per key: $2.13 (15% fees)</p>
-        <p class="text-xs text-gray-400 mt-1">Steam takes 5% and TF2 takes 10% from sales.</p>
-        <p class="text-xs text-gray-400 mt-1"><strong>Example:</strong> $2.50 × 0.85 = $2.125 ≈ $2.13</p>
+        <p id="net-received" class="mt-2">Net received per key: —</p>
+        <p class="text-xs text-gray-400 mt-1">Computed from live Steam price (Ukraine) × 0.85.</p>
       </div>
 
       <!-- نمایشگر قیمت EasyKeys -->
@@ -95,8 +92,8 @@
 
         <!-- Keys needed calculator -->
         <div class="mt-4 text-sm text-gray-300 text-left">
-          <label for="game-price" class="block font-semibold mb-1">Game price (USD)</label>
-          <input id="game-price" type="number" step="0.01" placeholder="e.g., 59.99" class="w-full bg-gray-700 rounded px-3 py-2 focus:outline-none" />
+          <label for="game-price" class="block font-semibold mb-1">Game price (UAH)</label>
+          <input id="game-price" type="number" step="0.01" placeholder="e.g., 1599.00" class="w-full bg-gray-700 rounded px-3 py-2 focus:outline-none" />
           <p id="keys-needed" class="mt-2">Keys needed: —</p>
           <p class="text-xs text-gray-400 mt-1">Calculated using net received per key after Steam fees.</p>
         </div>
@@ -180,29 +177,31 @@
         }
       }
 
-      // Net received computation
-      const buyerPriceInput = document.getElementById("buyer-price");
+      // Net received computation based on live Steam price (UAH)
       const netReceivedText = document.getElementById("net-received");
       const gamePriceInput = document.getElementById("game-price");
       const keysNeededText = document.getElementById("keys-needed");
 
-      function computeNetUSD() {
-        const buyer = parseFloat(buyerPriceInput.value || "0");
-        if (isNaN(buyer) || buyer <= 0) return 0;
-        return buyer * 0.85; // 15% total fees
+      let steamBuyerPriceUAH = 0;
+
+      function parseSteamPriceToUAH(str) {
+        const numStr = String(str).replace(/[^0-9.,]/g, "").replace(",", ".");
+        const num = parseFloat(numStr);
+        return isNaN(num) ? 0 : num;
       }
 
-      function updateNetReceived() {
-        const net = computeNetUSD();
+      function updateNetFromSteam(str) {
+        steamBuyerPriceUAH = parseSteamPriceToUAH(str);
+        const net = steamBuyerPriceUAH * 0.85; // 15% fees total
         if (net > 0) {
-          netReceivedText.textContent = `Net received per key: $${net.toFixed(2)} (15% fees)`;
+          netReceivedText.textContent = `Net received per key: ${net.toFixed(2)} UAH (15% fees)`;
         } else {
           netReceivedText.textContent = "Net received per key: —";
         }
       }
 
       function updateKeysNeeded() {
-        const net = computeNetUSD();
+        const net = steamBuyerPriceUAH * 0.85;
         const game = parseFloat(gamePriceInput.value || "0");
         if (!net || !game || isNaN(game) || game <= 0) {
           keysNeededText.textContent = "Keys needed: —";
@@ -220,14 +219,13 @@
         Promise.all([fetchSteamPrice(), fetchEasyKeysPrice()]).finally(() => {
           fetchButton.disabled = false;
           fetchButton.classList.remove("opacity-50", "cursor-not-allowed");
-          updateNetReceived();
+          updateNetFromSteam(priceText.textContent);
           updateKeysNeeded();
         });
       }
 
       // افزودن رویداد کلیک به دکمه
       fetchButton.addEventListener("click", () => { fetchAllPrices(); });
-      buyerPriceInput.addEventListener("input", () => { updateNetReceived(); updateKeysNeeded(); });
       gamePriceInput.addEventListener("input", updateKeysNeeded);
 
       // دریافت قیمت در اولین بارگذاری صفحه
