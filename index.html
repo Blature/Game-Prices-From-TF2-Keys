@@ -62,6 +62,16 @@
       .btn-gradient:hover {
         filter: brightness(1.08);
       }
+
+      /* Fullscreen canvas for interactive balls */
+      #bg-balls {
+        position: fixed;
+        inset: 0;
+        width: 100vw;
+        height: 100vh;
+        z-index: 1;
+        pointer-events: none; /* اجازه ندهد رویدادها را بگیرد */
+      }
       /* استایل برای انیمیشن لودینگ */
       .loader {
         border: 4px solid #f3f3f3;
@@ -85,6 +95,8 @@
   <body
     class="bg-gray-900 text-white flex items-center justify-center min-h-screen p-4"
   >
+    <!-- پس‌زمینه تعاملی با توپ‌ها -->
+    <canvas id="bg-balls"></canvas>
     <div
       class="w-full max-w-lg mx-auto p-8 glass-card rounded-2xl shadow-xl text-center relative z-10"
     >
@@ -278,6 +290,116 @@
 
       // دریافت قیمت در اولین بارگذاری صفحه
       window.onload = fetchAllPrices;
+
+      // --- Interactive background balls (mouse repel) ---
+      (function () {
+        const canvas = document.getElementById("bg-balls");
+        const ctx = canvas.getContext("2d");
+
+        let W = window.innerWidth;
+        let H = window.innerHeight;
+        let dpr = window.devicePixelRatio || 1;
+
+        function resize() {
+          W = window.innerWidth;
+          H = window.innerHeight;
+          dpr = window.devicePixelRatio || 1;
+          canvas.width = W * dpr;
+          canvas.height = H * dpr;
+          canvas.style.width = W + "px";
+          canvas.style.height = H + "px";
+          ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        }
+        resize();
+        window.addEventListener("resize", resize);
+
+        const themeColors = ["#2563eb", "#06b6d4", "#14b8a6", "#f59e0b"]; // آبی، فیروزه‌ای، سبز، نارنجی
+        const balls = [];
+        const maxCount = Math.min(28, Math.floor(W / 40));
+
+        function rand(min, max) { return Math.random() * (max - min) + min; }
+        function pick(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
+
+        for (let i = 0; i < maxCount; i++) {
+          balls.push({
+            x: rand(0, W),
+            y: rand(0, H),
+            vx: rand(-0.6, 0.6),
+            vy: rand(-0.6, 0.6),
+            r: rand(4, 10),
+            color: pick(themeColors),
+          });
+        }
+
+        const mouse = { x: W / 2, y: H / 2, active: false };
+        const repelRadius = 120; // شعاع تاثیر موس
+        const repelStrength = 1.8; // شدت دفع
+        const friction = 0.985;
+        const maxSpeed = 2.4;
+
+        window.addEventListener("mousemove", (e) => {
+          mouse.x = e.clientX;
+          mouse.y = e.clientY;
+          mouse.active = true;
+        });
+        window.addEventListener("mouseleave", () => { mouse.active = false; });
+
+        function step() {
+          ctx.clearRect(0, 0, W, H);
+
+          for (const b of balls) {
+            // دفع از موس
+            if (mouse.active) {
+              const dx = b.x - mouse.x;
+              const dy = b.y - mouse.y;
+              const dist = Math.hypot(dx, dy);
+              if (dist < repelRadius && dist > 0.001) {
+                const force = (repelRadius - dist) / repelRadius;
+                const nx = dx / dist;
+                const ny = dy / dist;
+                b.vx += nx * force * repelStrength;
+                b.vy += ny * force * repelStrength;
+              }
+            }
+
+            // حرکت و اصطکاک
+            b.vx *= friction;
+            b.vy *= friction;
+            // محدود کردن سرعت برای نرمی حرکت
+            const sp = Math.hypot(b.vx, b.vy);
+            if (sp > maxSpeed) {
+              b.vx = (b.vx / sp) * maxSpeed;
+              b.vy = (b.vy / sp) * maxSpeed;
+            }
+
+            b.x += b.vx;
+            b.y += b.vy;
+
+            // برخورد با مرزها (پرش نرم)
+            if (b.x < b.r) { b.x = b.r; b.vx *= -0.9; }
+            else if (b.x > W - b.r) { b.x = W - b.r; b.vx *= -0.9; }
+            if (b.y < b.r) { b.y = b.r; b.vy *= -0.9; }
+            else if (b.y > H - b.r) { b.y = H - b.r; b.vy *= -0.9; }
+
+            // رسم توپ
+            ctx.save();
+            ctx.globalAlpha = 0.85;
+            ctx.beginPath();
+            ctx.arc(b.x, b.y, b.r, 0, Math.PI * 2);
+            ctx.fillStyle = b.color;
+            ctx.shadowColor = b.color;
+            ctx.shadowBlur = 14;
+            ctx.fill();
+            ctx.lineWidth = 0.6;
+            ctx.strokeStyle = "rgba(255,255,255,0.08)";
+            ctx.stroke();
+            ctx.restore();
+          }
+
+          requestAnimationFrame(step);
+        }
+        requestAnimationFrame(step);
+      })();
     </script>
   </body>
 </html>
