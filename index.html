@@ -98,17 +98,17 @@
     <!-- پس‌زمینه تعاملی با توپ‌ها -->
     <canvas id="bg-balls"></canvas>
     <div
-      class="w-full max-w-lg mx-auto p-8 glass-card rounded-2xl shadow-xl text-center relative z-10"
+      class="w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 glass-card rounded-2xl shadow-xl text-center relative z-10 max-w-md sm:max-w-lg lg:max-w-3xl"
     >
       <!-- لوگو و عنوان -->
       <img
         src="https://wiki.teamfortress.com/w/images/thumb/6/69/Item_icon_Mann_Co._Supply_Crate_Key.png/250px-Item_icon_Mann_Co._Supply_Crate_Key.png"
         alt="TF2 Key"
-        class="mx-auto w-24 h-24 mb-4"
+        class="mx-auto w-16 h-16 sm:w-20 sm:h-20 lg:w-24 lg:h-24 mb-4"
         onerror="this.onerror=null;this.src='https://placehold.co/96x96/1f2937/ffffff?text=TF2+Key';"
       />
 
-      <h1 class="text-3xl font-bold mb-2 text-yellow-400">
+      <h1 class="text-2xl sm:text-3xl lg:text-4xl font-bold mb-2 text-yellow-400">
         Team Fortress 2 Key Price
       </h1>
 
@@ -118,9 +118,9 @@
       </p>
       <div
         id="price-display"
-        class="soft-card p-6 rounded-2xl mb-6 min-h-[100px] flex items-center justify-center"
+        class="soft-card p-4 sm:p-6 rounded-2xl mb-6 min-h-[80px] sm:min-h-[100px] flex items-center justify-center"
       >
-        <span id="price-text" class="text-4xl font-bold text-gray-500"
+        <span id="price-text" class="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-500"
           >...</span
         >
         <div id="loader" class="loader hidden"></div>
@@ -139,11 +139,11 @@
         </h2>
         <div
           id="easykeys-price-display"
-          class="soft-card p-6 rounded-2xl mb-6 min-h-[100px] flex items-center justify-center"
+          class="soft-card p-4 sm:p-6 rounded-2xl mb-6 min-h-[80px] sm:min-h-[100px] flex items-center justify-center"
         >
           <span
             id="easykeys-price-text"
-            class="text-4xl font-bold text-gray-500"
+            class="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-500"
             >...</span
           >
           <div id="easykeys-loader" class="loader hidden"></div>
@@ -153,7 +153,7 @@
         <!-- Keys needed calculator -->
         <div class="mt-4 text-sm text-gray-300 text-left">
           <label for="game-price" class="block font-semibold mb-1">Game price (UAH)</label>
-          <input id="game-price" type="number" step="0.01" placeholder="e.g., 1599.00" class="w-full bg-gray-700 rounded px-3 py-2 focus:outline-none" />
+          <input id="game-price" type="number" step="0.01" inputmode="decimal" placeholder="e.g., 1599.00" class="w-full bg-gray-700 rounded px-3 py-2 focus:outline-none text-base sm:text-lg" />
           <p id="keys-needed" class="mt-2">Keys needed: —</p>
           <p class="text-xs text-gray-400 mt-1">Calculated using net received per key after Steam fees.</p>
         </div>
@@ -162,7 +162,7 @@
       <!-- دکمه برای دریافت قیمت -->
       <button
         id="fetch-price-btn"
-        class="btn-gradient w-full mt-6 text-white font-bold py-3 px-4 rounded-xl transition duration-300 ease-in-out transform hover:scale-105 shadow-lg"
+        class="btn-gradient w-full mt-6 text-white font-bold py-3 px-4 sm:py-3 sm:px-6 rounded-xl transition duration-300 ease-in-out transform hover:scale-105 shadow-lg"
       >
         Refresh Prices
       </button>
@@ -315,7 +315,9 @@
 
         const themeColors = ["#2563eb", "#06b6d4", "#14b8a6", "#f59e0b"]; // آبی، فیروزه‌ای، سبز، نارنجی
         const balls = [];
-        const maxCount = Math.min(80, Math.floor(W / 20));
+        const isCoarse = window.matchMedia("(pointer: coarse)").matches;
+        const baseCount = Math.floor(W / 24);
+        const maxCount = Math.min(isCoarse ? 28 : 80, baseCount);
 
         function rand(min, max) { return Math.random() * (max - min) + min; }
         function pick(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
@@ -324,54 +326,74 @@
           balls.push({
             x: rand(0, W),
             y: rand(0, H),
-            vx: rand(-0.8, 0.8),
-            vy: rand(-0.8, 0.8),
+            vx: 0,
+            vy: 0,
             r: rand(4, 10),
             color: pick(themeColors),
-            wanderAngle: rand(0, Math.PI * 2),
-            wanderSpeed: rand(0.4, 1.0),
           });
         }
 
-        const mouse = { x: W / 2, y: H / 2, active: false };
-        const repelRadius = 140; // شعاع تاثیر موس
-        const repelStrength = 2.2; // شدت دفع
-        const friction = 0.992; // اصطکاک کمتر برای لیز خوردن
-        const maxSpeed = 3.2; // کمی سریع‌تر برای حس پویاتر
+        const friction = 0.995; // حرکت حداقل ~۴ ثانیه و سپس کاهش تدریجی
+        const maxSpeed = 1.8; // سرعت کنترل‌شده
+        const minStopSpeed = 0.02; // آستانه توقف نرم
+        let effectRadius = isCoarse ? 100 : 140; // ناحیه اثر حرکت موس
+        const impulseScale = isCoarse ? 0.03 : 0.06; // شدت ایمپالس از حرکت موس
+        const shadowBlurLevel = isCoarse ? 8 : 14; // بلور سایه بر اساس دستگاه
 
+        let prevMouse = null;
         window.addEventListener("mousemove", (e) => {
-          mouse.x = e.clientX;
-          mouse.y = e.clientY;
-          mouse.active = true;
+          const mx = e.clientX;
+          const my = e.clientY;
+          if (prevMouse) {
+            const mdx = mx - prevMouse.x;
+            const mdy = my - prevMouse.y;
+            const mv = Math.hypot(mdx, mdy) || 0;
+            for (const b of balls) {
+              const dx = b.x - mx;
+              const dy = b.y - my;
+              const dist = Math.hypot(dx, dy);
+              if (dist < effectRadius) {
+                const weight = (effectRadius - dist) / effectRadius;
+                // ایمپالس در جهت حرکت موس
+                b.vx += mdx * impulseScale * weight;
+                b.vy += mdy * impulseScale * weight;
+              }
+            }
+          }
+          prevMouse = { x: mx, y: my };
         });
-        window.addEventListener("mouseleave", () => { mouse.active = false; });
+        window.addEventListener("mouseleave", () => { prevMouse = null; });
+
+        // پشتیبانی از لمس برای موبایل/تبلت
+        let prevTouch = null;
+        window.addEventListener("touchmove", (e) => {
+          const t = e.touches[0];
+          if (!t) return;
+          const mx = t.clientX;
+          const my = t.clientY;
+          if (prevTouch) {
+            const mdx = mx - prevTouch.x;
+            const mdy = my - prevTouch.y;
+            for (const b of balls) {
+              const dx = b.x - mx;
+              const dy = b.y - my;
+              const dist = Math.hypot(dx, dy);
+              if (dist < effectRadius) {
+                const weight = (effectRadius - dist) / effectRadius;
+                b.vx += mdx * impulseScale * weight;
+                b.vy += mdy * impulseScale * weight;
+              }
+            }
+          }
+          prevTouch = { x: mx, y: my };
+        }, { passive: true });
+        window.addEventListener("touchend", () => { prevTouch = null; }, { passive: true });
 
         function step() {
           ctx.clearRect(0, 0, W, H);
 
           for (const b of balls) {
-            // دفع از موس
-            if (mouse.active) {
-              const dx = b.x - mouse.x;
-              const dy = b.y - mouse.y;
-              const dist = Math.hypot(dx, dy);
-              if (dist < repelRadius && dist > 0.001) {
-                const force = (repelRadius - dist) / repelRadius;
-                const nx = dx / dist;
-                const ny = dy / dist;
-                b.vx += nx * force * repelStrength;
-                b.vy += ny * force * repelStrength;
-              }
-            }
-
-            // حرکت طبیعی: کمی سرگردانی و نویز برای حرکت دائمی و لیز خوردن
-            b.wanderAngle += rand(-0.03, 0.03);
-            const driftStrength = 0.04;
-            b.vx += Math.cos(b.wanderAngle) * driftStrength * b.wanderSpeed;
-            b.vy += Math.sin(b.wanderAngle) * driftStrength * b.wanderSpeed;
-            const jitter = 0.015;
-            b.vx += (Math.random() - 0.5) * jitter;
-            b.vy += (Math.random() - 0.5) * jitter;
+            // بدون گرانش مرکز/گوشه و بدون حرکت دائمی؛ فقط اثر ایمپالس موس و اصطکاک
 
             // حرکت و اصطکاک
             b.vx *= friction;
@@ -381,6 +403,10 @@
             if (sp > maxSpeed) {
               b.vx = (b.vx / sp) * maxSpeed;
               b.vy = (b.vy / sp) * maxSpeed;
+            }
+            // توقف نرم
+            if (sp < minStopSpeed) {
+              b.vx = 0; b.vy = 0;
             }
 
             b.x += b.vx;
@@ -392,14 +418,53 @@
             if (b.y < b.r) { b.y = b.r; b.vy *= -0.9; }
             else if (b.y > H - b.r) { b.y = H - b.r; b.vy *= -0.9; }
 
-            // رسم توپ
+          }
+
+          // برخورد توپ‌ها با یکدیگر (collision & separation)
+          for (let i = 0; i < balls.length; i++) {
+            const bi = balls[i];
+            for (let j = i + 1; j < balls.length; j++) {
+              const bj = balls[j];
+              const dx = bj.x - bi.x;
+              const dy = bj.y - bi.y;
+              const dist = Math.hypot(dx, dy);
+              const minDist = bi.r + bj.r;
+              if (dist > 0 && dist < minDist) {
+                const nx = dx / dist;
+                const ny = dy / dist;
+                const overlap = (minDist - dist) * 0.5;
+                // جداکردن برای رفع هم‌پوشانی
+                bi.x -= nx * overlap;
+                bi.y -= ny * overlap;
+                bj.x += nx * overlap;
+                bj.y += ny * overlap;
+                // تنظیم سرعت‌ها بر اساس مؤلفه نرمال با ضریب بازگشت
+                const rvx = bj.vx - bi.vx;
+                const rvy = bj.vy - bi.vy;
+                const rvn = rvx * nx + rvy * ny;
+                if (rvn < 0) {
+                  const e = 0.9; // ضریب بازگشت
+                  const impulse = -(1 + e) * rvn * 0.5; // جرم برابر
+                  const ix = impulse * nx;
+                  const iy = impulse * ny;
+                  bi.vx -= ix;
+                  bi.vy -= iy;
+                  bj.vx += ix;
+                  bj.vy += iy;
+                }
+              }
+            }
+          }
+
+          // رسم توپ‌ها در گذر جداگانه
+          for (const b of balls) {
             ctx.save();
             ctx.globalAlpha = 0.85;
             ctx.beginPath();
             ctx.arc(b.x, b.y, b.r, 0, Math.PI * 2);
             ctx.fillStyle = b.color;
             ctx.shadowColor = b.color;
-            ctx.shadowBlur = 14;
+            ctx.shadowBlur = shadowBlurLevel;
             ctx.fill();
             ctx.lineWidth = 0.6;
             ctx.strokeStyle = "rgba(255,255,255,0.08)";
