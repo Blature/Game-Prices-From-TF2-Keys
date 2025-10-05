@@ -315,7 +315,7 @@
 
         const themeColors = ["#2563eb", "#06b6d4", "#14b8a6", "#f59e0b"]; // آبی، فیروزه‌ای، سبز، نارنجی
         const balls = [];
-        const maxCount = Math.min(28, Math.floor(W / 40));
+        const maxCount = Math.min(80, Math.floor(W / 20));
 
         function rand(min, max) { return Math.random() * (max - min) + min; }
         function pick(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
@@ -324,18 +324,20 @@
           balls.push({
             x: rand(0, W),
             y: rand(0, H),
-            vx: rand(-0.6, 0.6),
-            vy: rand(-0.6, 0.6),
+            vx: rand(-0.8, 0.8),
+            vy: rand(-0.8, 0.8),
             r: rand(4, 10),
             color: pick(themeColors),
+            wanderAngle: rand(0, Math.PI * 2),
+            wanderSpeed: rand(0.4, 1.0),
           });
         }
 
         const mouse = { x: W / 2, y: H / 2, active: false };
-        const repelRadius = 120; // شعاع تاثیر موس
-        const repelStrength = 1.8; // شدت دفع
-        const friction = 0.985;
-        const maxSpeed = 2.4;
+        const repelRadius = 140; // شعاع تاثیر موس
+        const repelStrength = 2.2; // شدت دفع
+        const friction = 0.992; // اصطکاک کمتر برای لیز خوردن
+        const maxSpeed = 3.2; // کمی سریع‌تر برای حس پویاتر
 
         window.addEventListener("mousemove", (e) => {
           mouse.x = e.clientX;
@@ -361,6 +363,15 @@
                 b.vy += ny * force * repelStrength;
               }
             }
+
+            // حرکت طبیعی: کمی سرگردانی و نویز برای حرکت دائمی و لیز خوردن
+            b.wanderAngle += rand(-0.03, 0.03);
+            const driftStrength = 0.04;
+            b.vx += Math.cos(b.wanderAngle) * driftStrength * b.wanderSpeed;
+            b.vy += Math.sin(b.wanderAngle) * driftStrength * b.wanderSpeed;
+            const jitter = 0.015;
+            b.vx += (Math.random() - 0.5) * jitter;
+            b.vy += (Math.random() - 0.5) * jitter;
 
             // حرکت و اصطکاک
             b.vx *= friction;
